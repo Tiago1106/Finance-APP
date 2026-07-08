@@ -6,6 +6,9 @@ import { billInstanceDueDate, resolveBillStatus } from "@/lib/core/bills";
 import { monthBoundsISO } from "@/lib/queries/common";
 
 export const dynamic = "force-dynamic";
+// Default da Vercel e 10s (Hobby) — percorre todas as bills ativas do
+// household; 60s e o teto do plano Hobby.
+export const maxDuration = 60;
 
 /**
  * Cron mensal (ESCOPO 6.3.1): gera a pendencia do mes para cada conta a

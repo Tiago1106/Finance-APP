@@ -2,6 +2,9 @@ import { webhookCallback } from "grammy";
 import { getBot } from "@/lib/bot/bot";
 
 export const dynamic = "force-dynamic";
+// Default da Vercel e 10s (Hobby) — chamada a IA + banco pode passar disso,
+// principalmente em cold start. 60s e o teto do plano Hobby.
+export const maxDuration = 60;
 
 /**
  * Webhook do Telegram. O grammY valida o header

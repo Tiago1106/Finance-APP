@@ -17,6 +17,9 @@ import { deleteExpiredPendingActions } from "@/lib/bot/pending";
 import { formatBRL } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+// Default da Vercel e 10s (Hobby) — percorre todas as recorrencias/bills
+// do household; 60s e o teto do plano Hobby.
+export const maxDuration = 60;
 
 function unauthorized(request: Request): boolean {
   return request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`;
