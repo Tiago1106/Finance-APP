@@ -1,0 +1,165 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-muted: var(--primary-muted);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-income: var(--income);
+  --color-expense: var(--expense);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * Design system — Finance App (ver CLAUDE.md secao 6).
+ * Dark mode e o padrao (marcado em <html class="dark"> em layout.tsx).
+ * Light mode fica estruturado mas nao e prioridade na v1.
+ * Nunca usar cor literal em componentes — sempre os tokens abaixo.
+ */
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(240 10% 6%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(240 10% 6%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(240 10% 6%);
+  --primary: hsl(263 70% 50%);
+  --primary-hover: hsl(263 70% 44%);
+  --primary-muted: hsl(263 40% 92%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(240 5% 96%);
+  --secondary-foreground: hsl(240 10% 6%);
+  --muted: hsl(240 5% 96%);
+  --muted-foreground: hsl(240 4% 40%);
+  --accent: hsl(263 40% 92%);
+  --accent-foreground: hsl(263 70% 30%);
+  --destructive: hsl(0 72% 50%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(240 6% 90%);
+  --input: hsl(240 6% 90%);
+  --ring: hsl(263 70% 50%);
+  --income: hsl(152 60% 38%);
+  --expense: hsl(0 72% 50%);
+  --warning: hsl(38 92% 45%);
+  --chart-1: hsl(263 70% 50%);
+  --chart-2: hsl(280 65% 55%);
+  --chart-3: hsl(230 65% 55%);
+  --chart-4: hsl(320 65% 55%);
+  --chart-5: hsl(263 40% 35%);
+  --radius: 0.75rem;
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(240 10% 6%);
+  --sidebar-primary: hsl(263 70% 50%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(263 40% 92%);
+  --sidebar-accent-foreground: hsl(263 70% 30%);
+  --sidebar-border: hsl(240 6% 90%);
+  --sidebar-ring: hsl(263 70% 50%);
+}
+
+.dark {
+  /* Marca */
+  --primary: hsl(263 70% 58%);
+  --primary-hover: hsl(263 70% 64%);
+  --primary-muted: hsl(263 40% 25%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  /* Superficies */
+  --background: hsl(240 10% 6%);
+  --card: hsl(240 8% 10%);
+  --card-foreground: hsl(0 0% 96%);
+  --popover: hsl(240 8% 10%);
+  --popover-foreground: hsl(0 0% 96%);
+  --border: hsl(240 6% 18%);
+  --input: hsl(240 6% 18%);
+
+  /* Texto */
+  --foreground: hsl(0 0% 96%);
+  --muted-foreground: hsl(240 5% 62%);
+
+  --secondary: hsl(240 6% 16%);
+  --secondary-foreground: hsl(0 0% 96%);
+  --muted: hsl(240 6% 14%);
+  --accent: hsl(263 40% 25%);
+  --accent-foreground: hsl(0 0% 96%);
+  --destructive: hsl(0 72% 58%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --ring: hsl(263 70% 58%);
+
+  /* Semanticas financeiras */
+  --income: hsl(152 60% 45%);
+  --expense: hsl(0 72% 58%);
+  --warning: hsl(38 92% 55%);
+
+  /* Paleta categorica de graficos: roxo -> violeta -> azul -> rosa */
+  --chart-1: hsl(263 70% 58%);
+  --chart-2: hsl(280 65% 60%);
+  --chart-3: hsl(230 65% 60%);
+  --chart-4: hsl(320 65% 60%);
+  --chart-5: hsl(263 40% 40%);
+
+  --radius: 0.75rem;
+  --sidebar: hsl(240 8% 10%);
+  --sidebar-foreground: hsl(0 0% 96%);
+  --sidebar-primary: hsl(263 70% 58%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(263 40% 25%);
+  --sidebar-accent-foreground: hsl(0 0% 96%);
+  --sidebar-border: hsl(240 6% 18%);
+  --sidebar-ring: hsl(263 70% 58%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
