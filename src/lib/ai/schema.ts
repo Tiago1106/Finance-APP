@@ -61,6 +61,12 @@ export const IntentSchema = z.discriminatedUnion("intent", [
     category_name: nullableString,
   }),
   z.strictObject({
+    intent: z.literal("create_category"),
+    name: z.string(),
+    /** Valor em reais, string igual aos outros campos monetarios. Null = sem orcamento. */
+    monthly_budget: nullableString,
+  }),
+  z.strictObject({
     intent: z.literal("add_bill"),
     name: z.string(),
     expected_due_day: z.int(),

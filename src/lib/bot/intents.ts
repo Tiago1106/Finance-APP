@@ -122,9 +122,15 @@ async function askAccount(
 
 type CategoryAskablePayload = Extract<
   PendingPayload,
-  { flow: "expense" | "income" } | { flow: "installment" }
+  { flow: "expense" | "income" } | { flow: "installment" } | { flow: "recurring" }
 >;
 
+/**
+ * Sempre pergunta a categoria — nunca grava em silencio, mesmo quando a
+ * proposta da IA bate com uma categoria existente (ESCOPO 4.3). Botoes
+ * cobrem as 4 opcoes: confirmar a proposta, escolher outra existente,
+ * criar uma nova, ou deixar sem categoria.
+ */
 async function askCategory(
   reply: Replier,
   telegramUserId: string,
@@ -132,25 +138,32 @@ async function askCategory(
   payload: CategoryAskablePayload,
   proposedName: string | null
 ): Promise<void> {
-  const options = hctx.categories.slice(0, 6);
+  const matched = proposedName ? findCategory(hctx.categories, proposedName) : null;
+  const rest = hctx.categories.filter((c) => c.id !== matched?.id);
+  const ordered = matched ? [matched, ...rest] : hctx.categories;
+  const options = ordered.slice(0, 6);
+
   const id = await createPendingAction(telegramUserId, BotPendingActionKind.CONFIRM_CATEGORY, {
     ...payload,
     categoryOptionIds: options.map((c) => c.id),
   });
   const keyboard = new InlineKeyboard();
-  if (proposedName) {
+  options.forEach((c, i) => {
+    const label = matched && c.id === matched.id ? `✅ ${c.name}` : c.name;
+    keyboard.text(label, `pa:${id}:c${i}`).row();
+  });
+  if (proposedName && !matched) {
     keyboard.text(`Criar "${proposedName}"`, `pa:${id}:create`).row();
   }
-  options.forEach((c, i) => {
-    keyboard.text(c.name, `pa:${id}:c${i}`).row();
-  });
   keyboard.text("Sem categoria", `pa:${id}:none`);
-  await reply.reply(
-    proposedName
-      ? `Não achei a categoria "${proposedName}". O que prefere?`
-      : "Em qual categoria?",
-    { reply_markup: keyboard }
-  );
+
+  const question = matched
+    ? `Confirma a categoria de "${payload.description}"?`
+    : proposedName
+      ? `Não achei a categoria "${proposedName}" pra "${payload.description}". Qual usar?`
+      : `Em qual categoria fica "${payload.description}"?`;
+
+  await reply.reply(question, { reply_markup: keyboard });
 }
 
 // ---------------------------------------------------------------------------
@@ -208,36 +221,36 @@ export async function finalizeSimpleTransaction(
   account: AccountOption,
   categoryChoice?: { id: string | null; name: string | null }
 ): Promise<void> {
-  // Categoria: escolha explicita (callback) > match existente > perguntar.
-  // Despesa sem categoria resolvida NUNCA grava em silencio — pergunta.
+  // Categoria: escolha explicita (callback) > perguntar (despesa) > match
+  // silencioso (receita). Despesa sem categoria resolvida NUNCA grava em
+  // silencio — pergunta sempre, mesmo quando a proposta bate com uma
+  // categoria existente (ESCOPO 4.3).
   let categoryId: string | null = null;
   let categoryLabel: string | null = null;
 
   if (categoryChoice !== undefined) {
     categoryId = categoryChoice.id;
     categoryLabel = categoryChoice.name;
-  } else {
+  } else if (draft.flow === "income") {
     const existing = findCategory(hctx.categories, draft.categoryName);
-    if (existing) {
-      categoryId = existing.id;
-      categoryLabel = existing.name;
-    } else if (draft.flow === "expense") {
-      await askCategory(
-        reply,
-        user.telegramUserId,
-        hctx,
-        {
-          flow: draft.flow,
-          amountCents: draft.amountCents,
-          description: draft.description,
-          categoryName: draft.categoryName,
-          dateISO: draft.dateISO,
-          accountId: account.id,
-        },
-        draft.categoryName
-      );
-      return;
-    }
+    categoryId = existing?.id ?? null;
+    categoryLabel = existing?.name ?? null;
+  } else {
+    await askCategory(
+      reply,
+      user.telegramUserId,
+      hctx,
+      {
+        flow: draft.flow,
+        amountCents: draft.amountCents,
+        description: draft.description,
+        categoryName: draft.categoryName,
+        dateISO: draft.dateISO,
+        accountId: account.id,
+      },
+      draft.categoryName
+    );
+    return;
   }
 
   await db.insert(transactions).values({
@@ -341,35 +354,30 @@ export async function finalizeInstallment(
     return;
   }
 
-  // Categoria: mesma regra do gasto simples — nunca gravar NULL em silencio.
+  // Categoria: mesma regra do gasto simples — sempre pergunta, nunca grava
+  // em silencio mesmo quando a proposta bate com uma categoria existente.
   let categoryId: string | null = null;
   let categoryLabel: string | null = null;
   if (categoryChoice !== undefined) {
     categoryId = categoryChoice.id;
     categoryLabel = categoryChoice.name;
   } else {
-    const existing = findCategory(hctx.categories, draft.categoryName);
-    if (existing) {
-      categoryId = existing.id;
-      categoryLabel = existing.name;
-    } else {
-      await askCategory(
-        reply,
-        user.telegramUserId,
-        hctx,
-        {
-          flow: "installment",
-          totalCents: draft.totalCents,
-          count: draft.count,
-          alreadyPaid: draft.alreadyPaid,
-          description: draft.description,
-          categoryName: draft.categoryName,
-          accountId: account.id,
-        },
-        draft.categoryName
-      );
-      return;
-    }
+    await askCategory(
+      reply,
+      user.telegramUserId,
+      hctx,
+      {
+        flow: "installment",
+        totalCents: draft.totalCents,
+        count: draft.count,
+        alreadyPaid: draft.alreadyPaid,
+        description: draft.description,
+        categoryName: draft.categoryName,
+        accountId: account.id,
+      },
+      draft.categoryName
+    );
+    return;
   }
 
   const card = cardCycle(account);
@@ -494,9 +502,38 @@ export async function finalizeRecurring(
   user: BotUser,
   hctx: HouseholdContext,
   draft: RecurringDraft,
-  account: AccountOption
+  account: AccountOption,
+  categoryChoice?: { id: string | null; name: string | null }
 ): Promise<void> {
-  const categoryId = findCategory(hctx.categories, draft.categoryName)?.id ?? null;
+  // Categoria: mesma regra do gasto simples — receita resolve em silencio,
+  // despesa sempre pergunta (ESCOPO 4.3).
+  let categoryId: string | null = null;
+  let categoryLabel: string | null = null;
+  if (categoryChoice !== undefined) {
+    categoryId = categoryChoice.id;
+    categoryLabel = categoryChoice.name;
+  } else if (draft.type === "income") {
+    const existing = findCategory(hctx.categories, draft.categoryName);
+    categoryId = existing?.id ?? null;
+    categoryLabel = existing?.name ?? null;
+  } else {
+    await askCategory(
+      reply,
+      user.telegramUserId,
+      hctx,
+      {
+        flow: "recurring",
+        amountCents: draft.amountCents,
+        description: draft.description,
+        dayOfMonth: draft.dayOfMonth,
+        type: draft.type,
+        categoryName: draft.categoryName,
+        accountId: account.id,
+      },
+      draft.categoryName
+    );
+    return;
+  }
 
   await db.insert(recurringRules).values({
     householdId: user.householdId,
@@ -509,9 +546,10 @@ export async function finalizeRecurring(
     createdBy: user.userId,
   });
 
+  const catPart = categoryLabel ? ` → ${categoryLabel}` : "";
   const cardNote = isCard(account) ? " Entra direto na fatura do cartão." : "";
   await reply.reply(
-    `✅ ${draft.description} ${formatBRL(draft.amountCents)} — recorrência mensal criada (dia ${draft.dayOfMonth}, ${account.name}). Lanço automaticamente e te aviso.${cardNote}`
+    `✅ ${draft.description} ${formatBRL(draft.amountCents)}${catPart} — recorrência mensal criada (dia ${draft.dayOfMonth}, ${account.name}). Lanço automaticamente e te aviso.${cardNote}`
   );
 }
 
@@ -547,6 +585,45 @@ async function runRecurring(
     return;
   }
   await finalizeRecurring(reply, user, hctx, draft, account);
+}
+
+// ---------------------------------------------------------------------------
+// Criar categoria (comando explicito do usuario — nao passa por askCategory,
+// a intencao ja e clara)
+// ---------------------------------------------------------------------------
+
+async function runCreateCategory(
+  reply: Replier,
+  user: BotUser,
+  hctx: HouseholdContext,
+  intent: Extract<Intent, { intent: "create_category" }>
+): Promise<void> {
+  const name = intent.name.trim();
+  const existing = findCategory(hctx.categories, name);
+  if (existing) {
+    await reply.reply(`A categoria "${existing.name}" já existe.`);
+    return;
+  }
+
+  const [created] = await db
+    .insert(categories)
+    .values({ householdId: user.householdId, name })
+    .returning({ id: categories.id, name: categories.name });
+
+  let budgetPart = "";
+  if (intent.monthly_budget) {
+    const cents = parseBRLToCents(intent.monthly_budget);
+    if (cents.ok && cents.data > 0) {
+      await db.insert(budgets).values({
+        householdId: user.householdId,
+        categoryId: created.id,
+        monthlyLimitCents: cents.data,
+      });
+      budgetPart = `, orçamento mensal de ${formatBRL(cents.data)}`;
+    }
+  }
+
+  await reply.reply(`✅ Categoria "${created.name}" criada${budgetPart}.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -931,6 +1008,8 @@ export async function dispatchIntent(
       return runInstallment(reply, user, hctx, intent);
     case "add_recurring":
       return runRecurring(reply, user, hctx, intent);
+    case "create_category":
+      return runCreateCategory(reply, user, hctx, intent);
     case "add_bill":
       return runAddBill(reply, user, hctx, intent);
     case "pay_bill":

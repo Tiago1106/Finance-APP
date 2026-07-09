@@ -39,7 +39,9 @@ export type PendingPayload =
       dayOfMonth: number;
       type: "expense" | "income";
       categoryName: string | null;
+      accountId?: string;
       accountOptionIds?: string[];
+      categoryOptionIds?: string[];
     }
   | {
       flow: "bill";

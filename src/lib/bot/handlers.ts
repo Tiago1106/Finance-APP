@@ -215,7 +215,7 @@ export async function handleCallback(ctx: Context): Promise<void> {
 
   if (
     pending.kind === "confirm_category" &&
-    (payload.flow === "expense" || payload.flow === "installment")
+    (payload.flow === "expense" || payload.flow === "installment" || payload.flow === "recurring")
   ) {
     const account = hctx.accounts.find((a) => a.id === payload.accountId);
     if (!account) {
@@ -268,6 +268,24 @@ export async function handleCallback(ctx: Context): Promise<void> {
           count: payload.count,
           alreadyPaid: payload.alreadyPaid,
           description: payload.description,
+          categoryName: payload.categoryName,
+        },
+        account,
+        categoryChoice
+      );
+    }
+
+    if (payload.flow === "recurring") {
+      return finalizeRecurring(
+        replyViaEdit,
+        user,
+        hctx,
+        {
+          flow: "recurring",
+          amountCents: payload.amountCents,
+          description: payload.description,
+          dayOfMonth: payload.dayOfMonth,
+          type: payload.type,
           categoryName: payload.categoryName,
         },
         account,
